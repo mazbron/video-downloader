@@ -109,11 +109,11 @@ function downloadVideo(url, quality, downloadDir, onProgress = null) {
         const outputPath = path.join(downloadDir, filename);
 
         // Quality format selection
-        // For quality, we try to get the best format up to the specified height
-        // with both video and audio, or best available if not found
+        // Prefer single file format (best) to avoid needing ffmpeg for merging
+        // Falls back to separate video+audio if single file not available
         const formatSpec = quality === '1080'
-            ? 'bestvideo[height<=1080]+bestaudio/best[height<=1080]/best'
-            : 'bestvideo[height<=720]+bestaudio/best[height<=720]/best';
+            ? 'best[height<=1080]/bestvideo[height<=1080]+bestaudio/best'
+            : 'best[height<=720]/bestvideo[height<=720]+bestaudio/best';
 
         const args = [
             '-f', formatSpec,
@@ -130,6 +130,9 @@ function downloadVideo(url, quality, downloadDir, onProgress = null) {
             '--prefer-insecure',
             '--retries', '3',
             '--fragment-retries', '3',
+            // Force re-encode to H.264 for Telegram compatibility (preserve aspect ratio)
+            '--recode-video', 'mp4',
+            '--postprocessor-args', 'ffmpeg:-vf scale=-2:720 -c:v libx264 -preset fast -crf 23 -c:a aac -b:a 128k',
             url
         ];
 
@@ -156,6 +159,13 @@ function downloadVideo(url, quality, downloadDir, onProgress = null) {
         });
 
         process.on('close', (code) => {
+            // Filter out Python deprecation warnings from stderr
+            const filteredStderr = stderr
+                .split('\n')
+                .filter(line => !line.includes('Deprecated Feature') && !line.includes('Please update to Python'))
+                .join('\n')
+                .trim();
+
             if (code === 0 && fs.existsSync(outputPath)) {
                 const stats = fs.statSync(outputPath);
                 resolve({
@@ -163,8 +173,20 @@ function downloadVideo(url, quality, downloadDir, onProgress = null) {
                     filename: filename,
                     size: stats.size
                 });
+            } else if (fs.existsSync(outputPath)) {
+                // Sometimes yt-dlp returns non-zero but file exists
+                const stats = fs.statSync(outputPath);
+                if (stats.size > 0) {
+                    resolve({
+                        path: outputPath,
+                        filename: filename,
+                        size: stats.size
+                    });
+                } else {
+                    reject(new Error(filteredStderr || 'Download failed'));
+                }
             } else {
-                reject(new Error(stderr || 'Download failed'));
+                reject(new Error(filteredStderr || 'Download failed'));
             }
         });
 

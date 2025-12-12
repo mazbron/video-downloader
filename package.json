@@ -5,9 +5,16 @@
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",
-    "dev": "node --watch src/index.js"
+    "dev": "export PATH=\"$PATH:/Users/user/Library/Python/3.9/bin\" && node --watch src/index.js",
+    "dev:linux": "node --watch src/index.js"
   },
-  "keywords": ["telegram", "bot", "video", "downloader", "yt-dlp"],
+  "keywords": [
+    "telegram",
+    "bot",
+    "video",
+    "downloader",
+    "yt-dlp"
+  ],
   "author": "",
   "license": "MIT",
   "dependencies": {
