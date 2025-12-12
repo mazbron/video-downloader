@@ -108,12 +108,11 @@ function downloadVideo(url, quality, downloadDir, onProgress = null) {
         const filename = generateFilename('mp4');
         const outputPath = path.join(downloadDir, filename);
 
-        // Quality format selection
-        // Prefer single file format (best) to avoid needing ffmpeg for merging
-        // Falls back to separate video+audio if single file not available
+        // Quality format selection - prefer higher quality formats
+        const height = quality === '1080' ? 1080 : 720;
         const formatSpec = quality === '1080'
-            ? 'best[height<=1080]/bestvideo[height<=1080]+bestaudio/best'
-            : 'best[height<=720]/bestvideo[height<=720]+bestaudio/best';
+            ? 'bestvideo[height<=1080]+bestaudio/best[height<=1080]/best'
+            : 'bestvideo[height<=720]+bestaudio/best[height<=720]/best';
 
         const args = [
             '-f', formatSpec,
@@ -130,9 +129,9 @@ function downloadVideo(url, quality, downloadDir, onProgress = null) {
             '--prefer-insecure',
             '--retries', '3',
             '--fragment-retries', '3',
-            // Force re-encode to H.264 for Telegram compatibility (preserve aspect ratio)
+            // Force re-encode to H.264 for Telegram compatibility (dynamic quality)
             '--recode-video', 'mp4',
-            '--postprocessor-args', 'ffmpeg:-vf scale=-2:720 -c:v libx264 -preset fast -crf 23 -c:a aac -b:a 128k',
+            '--postprocessor-args', `ffmpeg:-vf scale=-2:${height} -c:v libx264 -preset fast -crf 23 -c:a aac -b:a 128k`,
             url
         ];
 
