@@ -43,7 +43,7 @@ sudo apt install ffmpeg
 ### 1. Clone & Install
 ```bash
 cd /www/wwwroot/video-downloader  # atau path lain
-git clone <repo_url> .
+git clone https://github.com/mazbron/video-downloader.git .
 npm install
 ```
 
