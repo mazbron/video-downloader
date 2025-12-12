@@ -132,8 +132,15 @@ function downloadVideo(url, quality, downloadDir, onProgress = null) {
             // Force re-encode to H.264 for Telegram compatibility (dynamic quality)
             '--recode-video', 'mp4',
             '--postprocessor-args', `ffmpeg:-vf scale=-2:${height} -c:v libx264 -preset fast -crf 23 -c:a aac -b:a 128k`,
-            url
         ];
+
+        // Add cookies if file exists (for Instagram, Twitter)
+        const cookiesPath = path.join(process.cwd(), 'cookies.txt');
+        if (fs.existsSync(cookiesPath)) {
+            args.push('--cookies', cookiesPath);
+        }
+
+        args.push(url);
 
         const process = spawn('yt-dlp', args);
         let stderr = '';

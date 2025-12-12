@@ -201,6 +201,12 @@ ${getSupportedPlatforms()}
                 errorMessage += 'yt-dlp belum terinstall di server.';
             } else if (error.message.includes('Private video') || error.message.includes('Video unavailable')) {
                 errorMessage += 'Video tidak tersedia atau bersifat private.';
+            } else if (error.message.includes('login required') || error.message.includes('rate-limit')) {
+                errorMessage += 'Instagram membutuhkan login. Coba lagi nanti atau gunakan link yang berbeda.';
+            } else if (error.message.includes('No video could be found')) {
+                errorMessage += 'Tidak ada video ditemukan di tweet ini.';
+            } else if (error.message.includes('Sign in to confirm')) {
+                errorMessage += 'Twitter membutuhkan login untuk video ini.';
             } else {
                 errorMessage += 'Terjadi kesalahan. Pastikan link valid dan video bisa diakses.';
             }
