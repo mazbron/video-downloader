@@ -142,11 +142,11 @@ function downloadVideo(url, quality, downloadDir, onProgress = null) {
 
         args.push(url);
 
-        const process = spawn('yt-dlp', args);
+        const proc = spawn('yt-dlp', args);
         let stderr = '';
         let lastProgress = 0;
 
-        process.stdout.on('data', (data) => {
+        proc.stdout.on('data', (data) => {
             const output = data.toString();
             // Parse progress from yt-dlp output
             const match = output.match(/(\d+\.?\d*)%/);
@@ -160,11 +160,11 @@ function downloadVideo(url, quality, downloadDir, onProgress = null) {
             }
         });
 
-        process.stderr.on('data', (data) => {
+        proc.stderr.on('data', (data) => {
             stderr += data.toString();
         });
 
-        process.on('close', (code) => {
+        proc.on('close', (code) => {
             // Filter out Python deprecation warnings from stderr
             const filteredStderr = stderr
                 .split('\n')
@@ -196,7 +196,7 @@ function downloadVideo(url, quality, downloadDir, onProgress = null) {
             }
         });
 
-        process.on('error', (err) => {
+        proc.on('error', (err) => {
             reject(new Error(`yt-dlp not found. Please install yt-dlp: ${err.message}`));
         });
     });
