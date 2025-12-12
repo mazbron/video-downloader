@@ -122,9 +122,14 @@ function downloadVideo(url, quality, downloadDir, onProgress = null) {
             '--no-warnings',
             '--no-playlist',
             '--progress',
-            // Bypass YouTube restrictions
+            // Bypass restrictions
             '--extractor-args', 'youtube:player_client=android',
             '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            // Additional options for Facebook and other platforms
+            '--no-check-certificates',
+            '--prefer-insecure',
+            '--retries', '3',
+            '--fragment-retries', '3',
             url
         ];
 
