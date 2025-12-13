@@ -68,7 +68,7 @@ function trackUser(userId) {
 function trackDownload(platform) {
     const stats = loadStats();
     stats.totalDownloads++;
-    if (stats.downloads[platform]) {
+    if (platform in stats.downloads) {
         stats.downloads[platform]++;
     }
     saveStats(stats);
