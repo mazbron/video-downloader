@@ -7,6 +7,7 @@ const {
     downloadVideo,
     getSupportedPlatforms
 } = require('./downloader');
+const { trackUser, trackDownload, formatStatsMessage } = require('./stats');
 
 // Store pending downloads (userId -> url)
 const pendingDownloads = new Map();
@@ -67,6 +68,12 @@ ${getSupportedPlatforms()}
         bot.sendMessage(chatId, helpMessage, { parse_mode: 'Markdown' });
     });
 
+    // /stats command
+    bot.onText(/\/stats/, (msg) => {
+        const chatId = msg.chat.id;
+        bot.sendMessage(chatId, formatStatsMessage(), { parse_mode: 'Markdown' });
+    });
+
     // Handle incoming URLs
     bot.on('message', async (msg) => {
         const chatId = msg.chat.id;
@@ -88,8 +95,11 @@ ${getSupportedPlatforms()}
 
         const platformInfo = getPlatformInfo(platform);
 
-        // Store URL for this user
-        pendingDownloads.set(chatId, url);
+        // Track user
+        trackUser(msg.from.id);
+
+        // Store URL and platform for this user
+        pendingDownloads.set(chatId, { url, platform });
 
         // Send quality selection
         const keyboard = {
@@ -123,12 +133,14 @@ ${getSupportedPlatforms()}
         if (!data.startsWith('quality_')) return;
 
         const quality = data.replace('quality_', '');
-        const url = pendingDownloads.get(chatId);
+        const pendingData = pendingDownloads.get(chatId);
 
-        if (!url) {
+        if (!pendingData) {
             bot.sendMessage(chatId, '❌ Session expired. Silakan kirim ulang link video.');
             return;
         }
+
+        const { url, platform } = pendingData;
 
         // Remove from pending
         pendingDownloads.delete(chatId);
@@ -186,6 +198,9 @@ ${getSupportedPlatforms()}
             await bot.sendVideo(chatId, result.path, {
                 caption: `✅ Downloaded (${quality}p) - ${formatSize(result.size)}`
             });
+
+            // Track successful download
+            trackDownload(platform);
 
             // File will be auto-deleted after 1 hour by cleanup scheduler
 
