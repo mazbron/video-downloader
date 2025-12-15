@@ -172,15 +172,10 @@ function downloadVideo(url, quality, downloadDir, platform = null, onProgress = 
             '--fragment-retries', '3',
         ];
 
-        // Facebook needs re-encoding for Telegram compatibility
-        // Other platforms: copy streams (no quality loss) but ensure proper container
-        if (platform === 'facebook') {
-            args.push('--recode-video', 'mp4');
-            args.push('--postprocessor-args', 'ffmpeg:-c:v libx264 -preset slow -crf 18 -c:a aac -b:a 192k');
-        } else {
-            // Copy video/audio streams without re-encoding (preserves quality)
-            args.push('--postprocessor-args', 'ffmpeg:-c:v copy -c:a copy');
-        }
+        // Always re-encode to H.264 for reliable Telegram compatibility
+        // CRF 17 = near-lossless quality
+        args.push('--recode-video', 'mp4');
+        args.push('--postprocessor-args', 'ffmpeg:-c:v libx264 -preset medium -crf 17 -c:a aac -b:a 192k');
 
         // Add cookies if file exists (for Instagram, Twitter)
         const cookiesPath = path.join(process.cwd(), 'cookies.txt');
