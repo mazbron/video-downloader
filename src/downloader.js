@@ -114,6 +114,13 @@ function downloadVideo(url, quality, downloadDir, onProgress = null) {
             ? 'bestvideo[height<=1080]+bestaudio/best[height<=1080]/best'
             : 'bestvideo[height<=720]+bestaudio/best[height<=720]/best';
 
+        // Quality settings: CRF 18 = high quality, CRF 23 = medium
+        // For 1080p: no scaling (keep original), higher bitrate
+        // For 720p: scale down, slightly lower bitrate
+        const ffmpegArgs = quality === '1080'
+            ? '-c:v libx264 -preset slow -crf 18 -c:a aac -b:a 192k'
+            : `-vf scale=-2:720 -c:v libx264 -preset fast -crf 20 -c:a aac -b:a 160k`;
+
         const args = [
             '-f', formatSpec,
             '--merge-output-format', 'mp4',
@@ -129,9 +136,9 @@ function downloadVideo(url, quality, downloadDir, onProgress = null) {
             '--prefer-insecure',
             '--retries', '3',
             '--fragment-retries', '3',
-            // Force re-encode to H.264 for Telegram compatibility (dynamic quality)
+            // Force re-encode to H.264 for Telegram compatibility
             '--recode-video', 'mp4',
-            '--postprocessor-args', `ffmpeg:-vf scale=-2:${height} -c:v libx264 -preset fast -crf 23 -c:a aac -b:a 128k`,
+            '--postprocessor-args', `ffmpeg:${ffmpegArgs}`,
         ];
 
         // Add cookies if file exists (for Instagram, Twitter)
