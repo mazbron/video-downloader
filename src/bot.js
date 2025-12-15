@@ -64,6 +64,8 @@ ${getSupportedPlatforms()}
 • 1080p - Kualitas lebih tinggi
 
 *Batas ukuran:* Maksimal 50MB (limit Telegram)
+
+Need more help? Chat admin @MAZBRON\\_contact
     `.trim();
 
         bot.sendMessage(chatId, helpMessage, { parse_mode: 'Markdown' });
