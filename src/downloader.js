@@ -146,10 +146,12 @@ function downloadVideo(url, quality, downloadDir, platform = null, onProgress = 
         const filename = generateFilename('mp4');
         const outputPath = path.join(downloadDir, filename);
 
-        // Quality format selection - prefer higher quality formats
+        // Quality format selection
+        // For 1080p: get best quality (let yt-dlp decide, prioritize bitrate)  
+        // For 720p: limit to 720p max
         const formatSpec = quality === '1080'
-            ? 'bestvideo[height<=1080]+bestaudio/best[height<=1080]/best'
-            : 'bestvideo[height<=720]+bestaudio/best[height<=720]/best';
+            ? 'bv*[height<=1080]+ba/b[height<=1080]/b'
+            : 'bv*[height<=720]+ba/b[height<=720]/b';
 
         const args = [
             '-f', formatSpec,
@@ -158,6 +160,8 @@ function downloadVideo(url, quality, downloadDir, platform = null, onProgress = 
             '--no-warnings',
             '--no-playlist',
             '--progress',
+            // Sort formats by quality (bitrate) - higher is better
+            '-S', 'res,br,vcodec:h264',
             // Bypass restrictions
             '--extractor-args', 'youtube:player_client=android',
             '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
