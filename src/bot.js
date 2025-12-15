@@ -222,6 +222,12 @@ ${getSupportedPlatforms()}
                 errorMessage += 'Tidak ada video ditemukan di tweet ini.';
             } else if (error.message.includes('Sign in to confirm')) {
                 errorMessage += 'Twitter membutuhkan login untuk video ini.';
+            } else if (error.message.includes('Unsupported URL') && error.message.includes('facebook.com/stories')) {
+                errorMessage += 'Facebook Stories belum didukung. Gunakan link Reels atau video biasa.';
+            } else if (error.message.includes('Unsupported URL')) {
+                errorMessage += 'Format URL tidak didukung.';
+            } else if (error.message.includes('login.php')) {
+                errorMessage += 'Facebook membutuhkan login. Pastikan cookies sudah dikonfigurasi.';
             } else {
                 errorMessage += 'Terjadi kesalahan. Pastikan link valid dan video bisa diakses.';
             }
