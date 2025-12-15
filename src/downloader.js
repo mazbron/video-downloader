@@ -79,20 +79,32 @@ function getVideoInfo(url) {
                     let size1080 = null;
 
                     if (info.formats) {
-                        // Find best formats for each quality
-                        const formats720 = info.formats.filter(f => f.height && f.height <= 720);
-                        const formats1080 = info.formats.filter(f => f.height && f.height <= 1080);
+                        // Separate video and audio formats
+                        const videoFormats = info.formats.filter(f => f.vcodec && f.vcodec !== 'none' && f.height);
+                        const audioFormats = info.formats.filter(f => f.acodec && f.acodec !== 'none' && (!f.vcodec || f.vcodec === 'none'));
 
-                        // Get filesize from best format (estimate)
-                        if (formats720.length > 0) {
-                            const best720 = formats720.reduce((a, b) =>
-                                ((a.filesize || 0) > (b.filesize || 0)) ? a : b);
-                            size720 = best720.filesize || best720.filesize_approx || null;
+                        // Get best audio size
+                        let audioSize = 0;
+                        if (audioFormats.length > 0) {
+                            const bestAudio = audioFormats.reduce((a, b) =>
+                                ((a.filesize || a.filesize_approx || 0) > (b.filesize || b.filesize_approx || 0)) ? a : b);
+                            audioSize = bestAudio.filesize || bestAudio.filesize_approx || 0;
                         }
-                        if (formats1080.length > 0) {
-                            const best1080 = formats1080.reduce((a, b) =>
-                                ((a.filesize || 0) > (b.filesize || 0)) ? a : b);
-                            size1080 = best1080.filesize || best1080.filesize_approx || null;
+
+                        // Find best video for each quality
+                        const video720 = videoFormats.filter(f => f.height <= 720);
+                        const video1080 = videoFormats.filter(f => f.height <= 1080);
+
+                        if (video720.length > 0) {
+                            const best = video720.reduce((a, b) =>
+                                ((a.filesize || a.filesize_approx || 0) > (b.filesize || b.filesize_approx || 0)) ? a : b);
+                            size720 = (best.filesize || best.filesize_approx || 0) + audioSize;
+                        }
+
+                        if (video1080.length > 0) {
+                            const best = video1080.reduce((a, b) =>
+                                ((a.filesize || a.filesize_approx || 0) > (b.filesize || b.filesize_approx || 0)) ? a : b);
+                            size1080 = (best.filesize || best.filesize_approx || 0) + audioSize;
                         }
                     }
 
