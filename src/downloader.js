@@ -153,6 +153,13 @@ function downloadVideo(url, quality, downloadDir, platform = null, onProgress = 
             ? 'bv*[height<=1080]+ba/b[height<=1080]/b'
             : 'bv*[height<=720]+ba/b[height<=720]/b';
 
+        // Platform-specific user agents for better quality
+        const userAgents = {
+            instagram: 'Instagram 219.0.0.12.117 Android (26/8.0.0; 480dpi; 1080x1920; samsung; SM-G950F; dreamlte; samsungexynos8895; en_US)',
+            default: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        };
+        const userAgent = userAgents[platform] || userAgents.default;
+
         const args = [
             '-f', formatSpec,
             '--merge-output-format', 'mp4',
@@ -162,9 +169,10 @@ function downloadVideo(url, quality, downloadDir, platform = null, onProgress = 
             '--progress',
             // Sort formats by quality (bitrate) - higher is better
             '-S', 'res,br,vcodec:h264',
+            // User agent (platform-specific)
+            '--user-agent', userAgent,
             // Bypass restrictions
             '--extractor-args', 'youtube:player_client=android',
-            '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
             // Additional options
             '--no-check-certificates',
             '--prefer-insecure',
