@@ -156,8 +156,8 @@ ${getSupportedPlatforms()}
         );
 
         try {
-            // Download video
-            const result = await downloadVideo(url, quality, downloadDir, (progress) => {
+            // Download video (platform passed for conditional re-encoding)
+            const result = await downloadVideo(url, quality, downloadDir, platform, (progress) => {
                 // Update progress (optional, might cause rate limiting)
                 bot.editMessageText(
                     `⏳ *Downloading...* (${quality}p)\n\nProgress: ${progress}%`,

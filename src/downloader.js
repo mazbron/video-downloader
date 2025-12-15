@@ -98,10 +98,11 @@ function getVideoInfo(url) {
  * @param {string} url - Video URL
  * @param {string} quality - Quality (720 or 1080)
  * @param {string} downloadDir - Download directory
+ * @param {string} platform - Platform name (youtube, tiktok, instagram, facebook, twitter)
  * @param {function} onProgress - Progress callback
  * @returns {Promise<object>}
  */
-function downloadVideo(url, quality, downloadDir, onProgress = null) {
+function downloadVideo(url, quality, downloadDir, platform = null, onProgress = null) {
     return new Promise((resolve, reject) => {
         ensureDir(downloadDir);
 
@@ -109,17 +110,9 @@ function downloadVideo(url, quality, downloadDir, onProgress = null) {
         const outputPath = path.join(downloadDir, filename);
 
         // Quality format selection - prefer higher quality formats
-        const height = quality === '1080' ? 1080 : 720;
         const formatSpec = quality === '1080'
             ? 'bestvideo[height<=1080]+bestaudio/best[height<=1080]/best'
             : 'bestvideo[height<=720]+bestaudio/best[height<=720]/best';
-
-        // Quality settings: CRF 18 = high quality, CRF 23 = medium
-        // For 1080p: no scaling (keep original), higher bitrate
-        // For 720p: scale down, slightly lower bitrate
-        const ffmpegArgs = quality === '1080'
-            ? '-c:v libx264 -preset slow -crf 18 -c:a aac -b:a 192k'
-            : `-vf scale=-2:720 -c:v libx264 -preset fast -crf 20 -c:a aac -b:a 160k`;
 
         const args = [
             '-f', formatSpec,
@@ -131,15 +124,19 @@ function downloadVideo(url, quality, downloadDir, onProgress = null) {
             // Bypass restrictions
             '--extractor-args', 'youtube:player_client=android',
             '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            // Additional options for Facebook and other platforms
+            // Additional options
             '--no-check-certificates',
             '--prefer-insecure',
             '--retries', '3',
             '--fragment-retries', '3',
-            // Force re-encode to H.264 for Telegram compatibility
-            '--recode-video', 'mp4',
-            '--postprocessor-args', `ffmpeg:${ffmpegArgs}`,
         ];
+
+        // ONLY re-encode for Facebook (codec compatibility issue with Telegram)
+        // Other platforms: keep original quality (no re-encoding)
+        if (platform === 'facebook') {
+            args.push('--recode-video', 'mp4');
+            args.push('--postprocessor-args', 'ffmpeg:-c:v libx264 -preset slow -crf 18 -c:a aac -b:a 192k');
+        }
 
         // Add cookies if file exists (for Instagram, Twitter)
         const cookiesPath = path.join(process.cwd(), 'cookies.txt');
