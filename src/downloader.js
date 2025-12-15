@@ -57,27 +57,52 @@ function getVideoInfo(url) {
             url
         ];
 
-        const process = spawn('yt-dlp', args);
+        const proc = spawn('yt-dlp', args);
         let stdout = '';
         let stderr = '';
 
-        process.stdout.on('data', (data) => {
+        proc.stdout.on('data', (data) => {
             stdout += data.toString();
         });
 
-        process.stderr.on('data', (data) => {
+        proc.stderr.on('data', (data) => {
             stderr += data.toString();
         });
 
-        process.on('close', (code) => {
+        proc.on('close', (code) => {
             if (code === 0) {
                 try {
                     const info = JSON.parse(stdout);
+
+                    // Find format sizes for 720p and 1080p
+                    let size720 = null;
+                    let size1080 = null;
+
+                    if (info.formats) {
+                        // Find best formats for each quality
+                        const formats720 = info.formats.filter(f => f.height && f.height <= 720);
+                        const formats1080 = info.formats.filter(f => f.height && f.height <= 1080);
+
+                        // Get filesize from best format (estimate)
+                        if (formats720.length > 0) {
+                            const best720 = formats720.reduce((a, b) =>
+                                ((a.filesize || 0) > (b.filesize || 0)) ? a : b);
+                            size720 = best720.filesize || best720.filesize_approx || null;
+                        }
+                        if (formats1080.length > 0) {
+                            const best1080 = formats1080.reduce((a, b) =>
+                                ((a.filesize || 0) > (b.filesize || 0)) ? a : b);
+                            size1080 = best1080.filesize || best1080.filesize_approx || null;
+                        }
+                    }
+
                     resolve({
                         title: info.title || 'Video',
                         duration: info.duration || 0,
                         uploader: info.uploader || 'Unknown',
-                        thumbnail: info.thumbnail || null
+                        thumbnail: info.thumbnail || null,
+                        size720: size720,
+                        size1080: size1080
                     });
                 } catch (e) {
                     reject(new Error('Failed to parse video info'));
@@ -87,7 +112,7 @@ function getVideoInfo(url) {
             }
         });
 
-        process.on('error', (err) => {
+        proc.on('error', (err) => {
             reject(new Error(`yt-dlp not found. Please install it: ${err.message}`));
         });
     });
@@ -131,11 +156,14 @@ function downloadVideo(url, quality, downloadDir, platform = null, onProgress = 
             '--fragment-retries', '3',
         ];
 
-        // ONLY re-encode for Facebook (codec compatibility issue with Telegram)
-        // Other platforms: keep original quality (no re-encoding)
+        // Facebook needs re-encoding for Telegram compatibility
+        // Other platforms: copy streams (no quality loss) but ensure proper container
         if (platform === 'facebook') {
             args.push('--recode-video', 'mp4');
             args.push('--postprocessor-args', 'ffmpeg:-c:v libx264 -preset slow -crf 18 -c:a aac -b:a 192k');
+        } else {
+            // Copy video/audio streams without re-encoding (preserves quality)
+            args.push('--postprocessor-args', 'ffmpeg:-c:v copy -c:a copy');
         }
 
         // Add cookies if file exists (for Instagram, Twitter)

@@ -4,6 +4,7 @@ const { isValidUrl, formatSize, cleanupFile } = require('./utils');
 const {
     detectPlatform,
     getPlatformInfo,
+    getVideoInfo,
     downloadVideo,
     getSupportedPlatforms
 } = require('./downloader');
@@ -101,24 +102,63 @@ ${getSupportedPlatforms()}
         // Store URL and platform for this user
         pendingDownloads.set(chatId, { url, platform });
 
-        // Send quality selection
-        const keyboard = {
-            inline_keyboard: [
-                [
-                    { text: '📹 720p', callback_data: 'quality_720' },
-                    { text: '📹 1080p', callback_data: 'quality_1080' }
-                ]
-            ]
-        };
+        // Send initial message
+        const loadingMsg = await bot.sendMessage(chatId, `${platformInfo.emoji} *${platformInfo.name}* terdeteksi!\n\n⏳ Mengambil info video...`, { parse_mode: 'Markdown' });
 
-        bot.sendMessage(
-            chatId,
-            `${platformInfo.emoji} *${platformInfo.name}* terdeteksi!\n\nPilih kualitas video:`,
-            {
-                parse_mode: 'Markdown',
-                reply_markup: keyboard
-            }
-        );
+        try {
+            // Get video info including sizes
+            const videoInfo = await getVideoInfo(url);
+
+            // Format sizes for buttons
+            const formatSize = (bytes) => {
+                if (!bytes) return '';
+                const mb = bytes / (1024 * 1024);
+                return ` (~${mb.toFixed(1)}MB)`;
+            };
+
+            const size720Text = formatSize(videoInfo.size720);
+            const size1080Text = formatSize(videoInfo.size1080);
+
+            // Send quality selection with sizes
+            const keyboard = {
+                inline_keyboard: [
+                    [
+                        { text: `📹 720p${size720Text}`, callback_data: 'quality_720' },
+                        { text: `📹 1080p${size1080Text}`, callback_data: 'quality_1080' }
+                    ]
+                ]
+            };
+
+            bot.editMessageText(
+                `${platformInfo.emoji} *${platformInfo.name}* terdeteksi!\n\n📝 *${videoInfo.title}*\n\nPilih kualitas video:`,
+                {
+                    chat_id: chatId,
+                    message_id: loadingMsg.message_id,
+                    parse_mode: 'Markdown',
+                    reply_markup: keyboard
+                }
+            );
+        } catch (error) {
+            // Fallback to simple buttons if info fetch fails
+            const keyboard = {
+                inline_keyboard: [
+                    [
+                        { text: '📹 720p', callback_data: 'quality_720' },
+                        { text: '📹 1080p', callback_data: 'quality_1080' }
+                    ]
+                ]
+            };
+
+            bot.editMessageText(
+                `${platformInfo.emoji} *${platformInfo.name}* terdeteksi!\n\nPilih kualitas video:`,
+                {
+                    chat_id: chatId,
+                    message_id: loadingMsg.message_id,
+                    parse_mode: 'Markdown',
+                    reply_markup: keyboard
+                }
+            );
+        }
     });
 
     // Handle quality selection callback
