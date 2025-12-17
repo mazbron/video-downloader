@@ -6,6 +6,7 @@ const {
     getPlatformInfo,
     getVideoInfo,
     downloadVideo,
+    downloadDirectVideo,
     getSupportedPlatforms
 } = require('./downloader');
 const { trackUser, trackDownload, formatStatsMessage } = require('./stats');
@@ -101,7 +102,46 @@ Need more help? Chat admin @MAZBRON\\_contact
         // Track user
         trackUser(msg.from.id);
 
-        // Store URL and platform for this user
+        // For direct links, download immediately without quality selection
+        if (platform === 'direct') {
+            const loadingMsg = await bot.sendMessage(chatId, `${platformInfo.emoji} *Direct Link* terdeteksi!\n\n⏳ *Downloading...*`, { parse_mode: 'Markdown' });
+
+            try {
+                const result = await downloadDirectVideo(url, downloadDir, (progress) => {
+                    bot.editMessageText(
+                        `${platformInfo.emoji} *Direct Link*\n\n⏳ *Downloading...*\n\nProgress: ${progress}%`,
+                        { chat_id: chatId, message_id: loadingMsg.message_id, parse_mode: 'Markdown' }
+                    ).catch(() => { });
+                });
+
+                // Check file size
+                if (result.size > 50 * 1024 * 1024) {
+                    bot.editMessageText(
+                        '❌ *File terlalu besar*\n\nMaksimal 50MB (limit Telegram)',
+                        { chat_id: chatId, message_id: loadingMsg.message_id, parse_mode: 'Markdown' }
+                    );
+                    return;
+                }
+
+                // Send video
+                await bot.sendVideo(chatId, result.path, {
+                    caption: `✅ Downloaded - ${formatSize(result.size)}`
+                });
+
+                trackDownload('direct');
+                bot.deleteMessage(chatId, loadingMsg.message_id).catch(() => { });
+
+            } catch (error) {
+                console.error('Direct download error:', error);
+                bot.editMessageText(
+                    '❌ *Gagal download*\n\nPastikan link valid dan bisa diakses.',
+                    { chat_id: chatId, message_id: loadingMsg.message_id, parse_mode: 'Markdown' }
+                );
+            }
+            return;
+        }
+
+        // Store URL and platform for this user (for non-direct links)
         pendingDownloads.set(chatId, { url, platform });
 
         // Send initial message

@@ -9,7 +9,8 @@ const PLATFORM_PATTERNS = {
     tiktok: /tiktok\.com/i,
     instagram: /instagram\.com/i,
     facebook: /(?:facebook\.com|fb\.watch|fb\.com)/i,
-    twitter: /(?:twitter\.com|x\.com)/i
+    twitter: /(?:twitter\.com|x\.com)/i,
+    direct: /\.(mp4|webm|mov|avi|mkv)(\?.*)?$/i  // Direct video links
 };
 
 // Platform display names and emojis
@@ -18,7 +19,8 @@ const PLATFORM_INFO = {
     tiktok: { name: 'TikTok', emoji: '🎵' },
     instagram: { name: 'Instagram', emoji: '📸' },
     facebook: { name: 'Facebook', emoji: '🔵' },
-    twitter: { name: 'Twitter/X', emoji: '🐦' }
+    twitter: { name: 'Twitter/X', emoji: '🐦' },
+    direct: { name: 'Direct Link', emoji: '🔗' }
 };
 
 /**
@@ -254,6 +256,89 @@ function downloadVideo(url, quality, downloadDir, platform = null, onProgress = 
 }
 
 /**
+ * Download video from direct URL
+ * @param {string} url - Direct video URL
+ * @param {string} downloadDir - Download directory
+ * @param {function} onProgress - Progress callback
+ * @returns {Promise<object>}
+ */
+function downloadDirectVideo(url, downloadDir, onProgress = null) {
+    return new Promise((resolve, reject) => {
+        ensureDir(downloadDir);
+
+        const https = require('https');
+        const http = require('http');
+        const filename = generateFilename('mp4');
+        const outputPath = path.join(downloadDir, filename);
+        const file = fs.createWriteStream(outputPath);
+
+        const protocol = url.startsWith('https') ? https : http;
+
+        const request = protocol.get(url, {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            }
+        }, (response) => {
+            // Handle redirects
+            if (response.statusCode === 301 || response.statusCode === 302) {
+                file.close();
+                fs.unlinkSync(outputPath);
+                return downloadDirectVideo(response.headers.location, downloadDir, onProgress)
+                    .then(resolve)
+                    .catch(reject);
+            }
+
+            if (response.statusCode !== 200) {
+                file.close();
+                fs.unlinkSync(outputPath);
+                reject(new Error(`Failed to download: HTTP ${response.statusCode}`));
+                return;
+            }
+
+            const totalSize = parseInt(response.headers['content-length'], 10);
+            let downloadedSize = 0;
+            let lastProgress = 0;
+
+            response.on('data', (chunk) => {
+                downloadedSize += chunk.length;
+                if (totalSize && onProgress) {
+                    const progress = Math.round((downloadedSize / totalSize) * 100);
+                    if (progress - lastProgress >= 10) {
+                        lastProgress = progress;
+                        onProgress(progress);
+                    }
+                }
+            });
+
+            response.pipe(file);
+
+            file.on('finish', () => {
+                file.close();
+                const stats = fs.statSync(outputPath);
+                resolve({
+                    path: outputPath,
+                    filename: filename,
+                    size: stats.size
+                });
+            });
+        });
+
+        request.on('error', (err) => {
+            file.close();
+            if (fs.existsSync(outputPath)) {
+                fs.unlinkSync(outputPath);
+            }
+            reject(new Error(`Download failed: ${err.message}`));
+        });
+
+        request.setTimeout(60000, () => {
+            request.destroy();
+            reject(new Error('Download timeout'));
+        });
+    });
+}
+
+/**
  * Get supported platforms list
  * @returns {string}
  */
@@ -268,5 +353,6 @@ module.exports = {
     getPlatformInfo,
     getVideoInfo,
     downloadVideo,
+    downloadDirectVideo,
     getSupportedPlatforms
 };

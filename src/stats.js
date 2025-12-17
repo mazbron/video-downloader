@@ -15,7 +15,8 @@ function getDefaultStats() {
             tiktok: 0,
             instagram: 0,
             facebook: 0,
-            twitter: 0
+            twitter: 0,
+            direct: 0
         },
         startDate: new Date().toISOString()
     };
@@ -108,6 +109,7 @@ function formatStatsMessage() {
 📸 Instagram: ${stats.downloads.instagram}
 🔵 Facebook: ${stats.downloads.facebook}
 🐦 Twitter: ${stats.downloads.twitter}
+🔗 Direct: ${stats.downloads.direct || 0}
 
 📅 Aktif sejak: ${startDate}
     `.trim();
